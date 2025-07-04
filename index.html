@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>실시간 보상 현황 래더보드</title>
+<title>실시간 Firebase 연동 보상 래더보드</title>
 <style>
     body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
     h1 { text-align: center; }
@@ -13,13 +13,24 @@
     .badge-label { font-size: 14px; margin-right: 5px; }
     .name-input { width: 50%; padding: 5px; margin-bottom: 5px; margin-left: 10px; }
     .team-header { display: flex; align-items: center; justify-content: space-between; }
-    button { margin: 5px; padding: 5px 10px; }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA67vsBnnxLW-5UbkEMdES3MTzWOwY_zvk",
+  authDomain: "realtime-reward-board.firebaseapp.com",
+  projectId: "realtime-reward-board",
+  storageBucket: "realtime-reward-board.firebasestorage.app",
+  messagingSenderId: "371810772387",
+  appId: "1:371810772387:web:c0f40246c2c379e2caa616"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
 </head>
 <body>
-<h1>실시간 보상 현황 래더보드</h1>
-<button onclick="downloadData()">데이터 다운로드</button>
-<input type="file" id="upload" accept="application/json" onchange="uploadData(event)">
+<h1>실시간 Firebase 보상 래더보드</h1>
 <div id="teams"></div>
 <script>
 const teams = Array.from({length: 14}, (_, i) => `${i+1}조`);
@@ -30,14 +41,11 @@ const badges = [
     { icon: '✨', label: '빛나는 머리' },
     { icon: '📊', label: '데이터마이너' }
 ];
-
 const teamsContainer = document.getElementById('teams');
-let savedData = JSON.parse(localStorage.getItem('rewardBoardData')) || {};
 
 teams.forEach(team => {
     const teamDiv = document.createElement('div');
     teamDiv.className = 'team';
-
     const headerDiv = document.createElement('div');
     headerDiv.className = 'team-header';
     const title = document.createElement('h2');
@@ -62,61 +70,43 @@ teams.forEach(team => {
         badgeIcon.textContent = badge.icon;
         badgeSpan.appendChild(badgeIcon);
 
-        badgeSpan.title = badge.label;
-        badgeSpan.addEventListener('click', () => {
+        badgeSpan.addEventListener('click', async () => {
             const studentName = nameInput.value.trim() || '익명';
             const comment = prompt(`💬 ${team} - ${badge.label} 코멘트를 입력하세요:`);
-            if(comment !== null) {
-                const log = document.createElement('div');
-                log.textContent = `${studentName} - ${badge.icon} ${badge.label}: ${comment}`;
-                teamDiv.appendChild(log);
-                if (!savedData[team]) savedData[team] = [];
-                savedData[team].push(`${studentName} - ${badge.icon} ${badge.label}: ${comment}`);
-                localStorage.setItem('rewardBoardData', JSON.stringify(savedData));
+            if (comment !== null && comment.trim() !== '') {
+                await db.collection('comments').add({
+                    team: team,
+                    studentName: studentName,
+                    badge: badge.label,
+                    icon: badge.icon,
+                    comment: comment.trim(),
+                    timestamp: Date.now()
+                });
             }
         });
         badgeContainer.appendChild(badgeSpan);
     });
     teamDiv.appendChild(badgeContainer);
-
-    if (savedData[team]) {
-        savedData[team].forEach(entry => {
-            const log = document.createElement('div');
-            log.textContent = entry;
-            teamDiv.appendChild(log);
-        });
-    }
-
     teamsContainer.appendChild(teamDiv);
 });
 
-function downloadData() {
-    const dataStr = JSON.stringify(savedData, null, 2);
-    const blob = new Blob([dataStr], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'rewardBoardData.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-function uploadData(event) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            savedData = JSON.parse(e.target.result);
-            localStorage.setItem('rewardBoardData', JSON.stringify(savedData));
-            alert('데이터가 업로드되었습니다. 페이지를 새로고침해 주세요.');
-        } catch (err) {
-            alert('JSON 파일 형식이 올바르지 않습니다.');
+db.collection('comments').orderBy('timestamp').onSnapshot(snapshot => {
+    snapshot.docChanges().forEach(change => {
+        if (change.type === 'added') {
+            const data = change.doc.data();
+            const teamDiv = Array.from(document.querySelectorAll('.team')).find(div => div.querySelector('h2').textContent === data.team);
+            if (teamDiv) {
+                const log = document.createElement('div');
+                log.textContent = `${data.studentName} - ${data.icon} ${data.badge}: ${data.comment}`;
+                teamDiv.appendChild(log);
+            }
         }
-    };
-    reader.readAsText(file);
-}
+    });
+});
+</script>
+</body>
+</html>
+
 </script>
 </body>
 </html>
