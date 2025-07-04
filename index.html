@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>실시간 보상 현황 래더보드</title>
+<style>
+    body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+    h1 { text-align: center; }
+    #teams { display: flex; flex-wrap: wrap; justify-content: center; }
+    .team { background: #fff; border-radius: 10px; padding: 10px; margin: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); width: 45%; box-sizing: border-box; }
+    .badge { cursor: pointer; margin: 5px; font-size: 20px; display: inline-flex; align-items: center; }
+    .badge-label { font-size: 14px; margin-right: 5px; }
+    .name-input { width: 50%; padding: 5px; margin-bottom: 5px; margin-left: 10px; }
+    .team-header { display: flex; align-items: center; justify-content: space-between; }
+    button { margin: 5px; padding: 5px 10px; }
+</style>
+</head>
+<body>
+<h1>실시간 보상 현황 래더보드</h1>
+<button onclick="downloadData()">데이터 다운로드</button>
+<input type="file" id="upload" accept="application/json" onchange="uploadData(event)">
+<div id="teams"></div>
+<script>
+const teams = Array.from({length: 14}, (_, i) => `${i+1}조`);
+const badges = [
+    { icon: '🎯', label: '1차 목표 도달' },
+    { icon: '💡', label: '끝없는 도전' },
+    { icon: '🤝', label: '환상의 팀워크' },
+    { icon: '✨', label: '빛나는 머리' },
+    { icon: '📊', label: '데이터마이너' }
+];
+
+const teamsContainer = document.getElementById('teams');
+let savedData = JSON.parse(localStorage.getItem('rewardBoardData')) || {};
+
+teams.forEach(team => {
+    const teamDiv = document.createElement('div');
+    teamDiv.className = 'team';
+
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'team-header';
+    const title = document.createElement('h2');
+    title.textContent = team;
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.placeholder = `학생 이름 입력`;
+    nameInput.className = 'name-input';
+    headerDiv.appendChild(title);
+    headerDiv.appendChild(nameInput);
+    teamDiv.appendChild(headerDiv);
+
+    const badgeContainer = document.createElement('div');
+    badges.forEach(badge => {
+        const badgeSpan = document.createElement('span');
+        badgeSpan.className = 'badge';
+        const badgeLabel = document.createElement('span');
+        badgeLabel.className = 'badge-label';
+        badgeLabel.textContent = badge.label;
+        badgeSpan.appendChild(badgeLabel);
+        const badgeIcon = document.createElement('span');
+        badgeIcon.textContent = badge.icon;
+        badgeSpan.appendChild(badgeIcon);
+
+        badgeSpan.title = badge.label;
+        badgeSpan.addEventListener('click', () => {
+            const studentName = nameInput.value.trim() || '익명';
+            const comment = prompt(`💬 ${team} - ${badge.label} 코멘트를 입력하세요:`);
+            if(comment !== null) {
+                const log = document.createElement('div');
+                log.textContent = `${studentName} - ${badge.icon} ${badge.label}: ${comment}`;
+                teamDiv.appendChild(log);
+                if (!savedData[team]) savedData[team] = [];
+                savedData[team].push(`${studentName} - ${badge.icon} ${badge.label}: ${comment}`);
+                localStorage.setItem('rewardBoardData', JSON.stringify(savedData));
+            }
+        });
+        badgeContainer.appendChild(badgeSpan);
+    });
+    teamDiv.appendChild(badgeContainer);
+
+    if (savedData[team]) {
+        savedData[team].forEach(entry => {
+            const log = document.createElement('div');
+            log.textContent = entry;
+            teamDiv.appendChild(log);
+        });
+    }
+
+    teamsContainer.appendChild(teamDiv);
+});
+
+function downloadData() {
+    const dataStr = JSON.stringify(savedData, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rewardBoardData.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function uploadData(event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            savedData = JSON.parse(e.target.result);
+            localStorage.setItem('rewardBoardData', JSON.stringify(savedData));
+            alert('데이터가 업로드되었습니다. 페이지를 새로고침해 주세요.');
+        } catch (err) {
+            alert('JSON 파일 형식이 올바르지 않습니다.');
+        }
+    };
+    reader.readAsText(file);
+}
+</script>
+</body>
+</html>
