@@ -17,17 +17,16 @@
 </style>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, setDoc, doc, deleteDoc, orderBy, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, setDoc, doc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA67vsBnnxLW-5UbkEMdES3MTzWOwY_zvk",
-  authDomain: "realtime-reward-board.firebaseapp.com",
-  projectId: "realtime-reward-board",
-  storageBucket: "realtime-reward-board.appspot.com",
-  messagingSenderId: "371810772387",
-  appId: "1:371810772387:web:c0f40246c2c379e2caa616"
+    apiKey: "AIzaSyA67vsBnnxLW-5UbkEMdES3MTzWOwY_zvk",
+    authDomain: "realtime-reward-board.firebaseapp.com",
+    projectId: "realtime-reward-board",
+    storageBucket: "realtime-reward-board.appspot.com",
+    messagingSenderId: "371810772387",
+    appId: "1:371810772387:web:c0f40246c2c379e2caa616"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -35,8 +34,8 @@ window.downloadJSON = async function() {
     const commentsSnapshot = await getDocs(collection(db, 'comments'));
     const teamNamesSnapshot = await getDocs(collection(db, 'teamNames'));
     const data = {
-        comments: commentsSnapshot.docs.map(doc => doc.data()),
-        teamNames: teamNamesSnapshot.docs.map(doc => doc.data())
+        comments: commentsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })),
+        teamNames: teamNamesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -56,12 +55,14 @@ window.uploadJSON = async function(event) {
         const json = JSON.parse(text);
         if (json.comments && json.teamNames) {
             for (const entry of json.comments) {
-                await addDoc(collection(db, 'comments'), entry);
+                const id = entry.id;
+                delete entry.id;
+                await setDoc(doc(db, 'comments', id), entry);
             }
             for (const entry of json.teamNames) {
-                if (entry.team) {
-                    await setDoc(doc(db, 'teamNames', entry.team), entry);
-                }
+                const id = entry.id;
+                delete entry.id;
+                await setDoc(doc(db, 'teamNames', id), entry);
             }
             alert('전체 데이터 업로드 완료! 새로고침 해주세요.');
         } else {
@@ -75,101 +76,15 @@ window.uploadJSON = async function(event) {
 window.clearData = async function() {
     if (!confirm('모든 데이터를 초기화하시겠습니까?')) return;
     const commentsSnapshot = await getDocs(collection(db, 'comments'));
-    commentsSnapshot.forEach(async (docSnap) => { await deleteDoc(doc(db, 'comments', docSnap.id)); });
+    commentsSnapshot.forEach(async (docSnap) => {
+        await deleteDoc(doc(db, 'comments', docSnap.id));
+    });
     const namesSnapshot = await getDocs(collection(db, 'teamNames'));
-    namesSnapshot.forEach(async (docSnap) => { await deleteDoc(doc(db, 'teamNames', docSnap.id)); });
+    namesSnapshot.forEach(async (docSnap) => {
+        await deleteDoc(doc(db, 'teamNames', docSnap.id));
+    });
     alert('모든 데이터가 삭제되었습니다. 새로고침해주세요.');
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-const teams = Array.from({ length: 14 }, (_, i) => `${i + 1}조`);
-const badges = [
-    { icon: '🎯', label: '1차 목표 도달' },
-    { icon: '💡', label: '끝없는 도전' },
-    { icon: '🤝', label: '환상의 팀워크' },
-    { icon: '✨', label: '빛나는 머리' },
-    { icon: '📊', label: '데이터마이너' }
-];
-const teamsContainer = document.getElementById('teams');
-
-teams.forEach(team => {
-    const teamDiv = document.createElement('div');
-    teamDiv.className = 'team';
-    teamDiv.dataset.team = team;
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'team-header';
-    const title = document.createElement('h2');
-    title.textContent = team;
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.placeholder = `학생 이름 입력`;
-    nameInput.className = 'name-input';
-    headerDiv.appendChild(title);
-    headerDiv.appendChild(nameInput);
-    teamDiv.appendChild(headerDiv);
-
-    nameInput.addEventListener('change', async () => {
-        await setDoc(doc(db, 'teamNames', team), {
-            team: team,
-            studentName: nameInput.value.trim()
-        }, { merge: true });
-        alert(`${team} 이름 저장 완료`);
-    });
-
-    const badgeContainer = document.createElement('div');
-    badges.forEach(badge => {
-        const badgeSpan = document.createElement('span');
-        badgeSpan.className = 'badge';
-        const badgeLabel = document.createElement('span');
-        badgeLabel.className = 'badge-label';
-        badgeLabel.textContent = badge.label;
-        badgeSpan.appendChild(badgeLabel);
-        const badgeIcon = document.createElement('span');
-        badgeIcon.textContent = badge.icon;
-        badgeSpan.appendChild(badgeIcon);
-
-        badgeSpan.addEventListener('click', async () => {
-            const studentName = nameInput.value.trim() || '익명';
-            const comment = prompt(`💬 ${badge.label} 코멘트를 입력하세요:`);
-            if (comment !== null && comment.trim() !== '') {
-                await addDoc(collection(db, 'comments'), {
-                    team: team,
-                    studentName: studentName,
-                    badge: badge.label,
-                    icon: badge.icon,
-                    comment: comment.trim(),
-                    timestamp: Date.now()
-                });
-            }
-        });
-        badgeContainer.appendChild(badgeSpan);
-    });
-    teamDiv.appendChild(badgeContainer);
-    teamsContainer.appendChild(teamDiv);
-
-    onSnapshot(doc(db, 'teamNames', team), (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            nameInput.value = data.studentName || '';
-        }
-    });
-});
-
-const q = query(collection(db, 'comments'), orderBy('timestamp'));
-onSnapshot(q, snapshot => {
-    snapshot.docChanges().forEach(change => {
-        if (change.type === 'added') {
-            const data = change.doc.data();
-            const teamDiv = Array.from(document.querySelectorAll('.team')).find(div => div.dataset.team === data.team);
-            if (teamDiv) {
-                const log = document.createElement('div');
-                log.textContent = `${data.studentName} - ${data.icon} ${data.badge}: ${data.comment}`;
-                teamDiv.appendChild(log);
-            }
-        }
-    });
-});
-});
 </script>
 </head>
 <body>
@@ -180,3 +95,4 @@ onSnapshot(q, snapshot => {
 <div id="teams"></div>
 </body>
 </html>
+
