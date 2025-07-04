@@ -13,27 +13,54 @@
     .badge-label { font-size: 14px; margin-right: 5px; }
     .name-input { width: 50%; padding: 5px; margin-bottom: 5px; margin-left: 10px; }
     .team-header { display: flex; align-items: center; justify-content: space-between; }
+    button { margin: 5px; padding: 5px 10px; }
 </style>
-<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js"></script>
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, orderBy, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyA67vsBnnxLW-5UbkEMdES3MTzWOwY_zvk",
   authDomain: "realtime-reward-board.firebaseapp.com",
   projectId: "realtime-reward-board",
-  storageBucket: "realtime-reward-board.firebasestorage.app",
+  storageBucket: "realtime-reward-board.appspot.com",
   messagingSenderId: "371810772387",
   appId: "1:371810772387:web:c0f40246c2c379e2caa616"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-</script>
-</head>
-<body>
-<h1>실시간 Firebase 보상 래더보드</h1>
-<div id="teams"></div>
-<script>
-const teams = Array.from({length: 14}, (_, i) => `${i+1}조`);
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.downloadData = async function() {
+    const snapshot = await getDocs(collection(db, 'comments'));
+    const data = snapshot.docs.map(doc => doc.data());
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rewardBoardData.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+window.uploadData = async function(event) {
+    const file = event.target.files[0];
+    const text = await file.text();
+    try {
+        const json = JSON.parse(text);
+        for (const entry of json) {
+            await addDoc(collection(db, 'comments'), entry);
+        }
+        alert('데이터 업로드 완료! 새로고침 해주세요.');
+    } catch (e) {
+        alert('올바르지 않은 JSON 파일입니다.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+const teams = Array.from({ length: 14 }, (_, i) => `${i + 1}조`);
 const badges = [
     { icon: '🎯', label: '1차 목표 도달' },
     { icon: '💡', label: '끝없는 도전' },
@@ -74,7 +101,7 @@ teams.forEach(team => {
             const studentName = nameInput.value.trim() || '익명';
             const comment = prompt(`💬 ${team} - ${badge.label} 코멘트를 입력하세요:`);
             if (comment !== null && comment.trim() !== '') {
-                await db.collection('comments').add({
+                await addDoc(collection(db, 'comments'), {
                     team: team,
                     studentName: studentName,
                     badge: badge.label,
@@ -90,7 +117,8 @@ teams.forEach(team => {
     teamsContainer.appendChild(teamDiv);
 });
 
-db.collection('comments').orderBy('timestamp').onSnapshot(snapshot => {
+const q = query(collection(db, 'comments'), orderBy('timestamp'));
+onSnapshot(q, snapshot => {
     snapshot.docChanges().forEach(change => {
         if (change.type === 'added') {
             const data = change.doc.data();
@@ -103,10 +131,13 @@ db.collection('comments').orderBy('timestamp').onSnapshot(snapshot => {
         }
     });
 });
+});
 </script>
-</body>
-</html>
-
-</script>
+</head>
+<body>
+<h1>실시간 Firebase 보상 래더보드</h1>
+<button onclick="downloadData()">데이터 다운로드</button>
+<input type="file" accept="application/json" onchange="uploadData(event)">
+<div id="teams"></div>
 </body>
 </html>
