@@ -32,6 +32,68 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+window.downloadJSON = async function() {
+    const commentsSnap = await getDocs(collection(db, 'comments'));
+    const teamNamesSnap = await getDocs(collection(db, 'teamNames'));
+    const data = {
+        comments: commentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+        teamNames: teamNamesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rewardBoardBackup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+window.uploadJSON = async function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    const json = JSON.parse(text);
+    if (json.comments && json.teamNames) {
+        for (const entry of json.comments) {
+            const id = entry.id; delete entry.id;
+            await setDoc(doc(db, 'comments', id), entry);
+        }
+        for (const entry of json.teamNames) {
+            const id = entry.id; delete entry.id;
+            await setDoc(doc(db, 'teamNames', id), entry);
+        }
+        alert('업로드 완료! 새로고침하세요.');
+    } else {
+        alert('JSON 구조가 올바르지 않습니다.');
+    }
+}
+
+window.downloadCSV = async function() {
+    const snap = await getDocs(collection(db, 'comments'));
+    const rows = [['조', '학생이름', '배지', '코멘트']];
+    snap.forEach(doc => {
+        const d = doc.data();
+        rows.push([d.team, d.studentName, d.badge, d.comment]);
+    });
+    const csvContent = '\ufeff' + rows.map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rewardBoardData.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+window.clearData = async function() {
+    if (!confirm('모든 데이터를 삭제하시겠습니까?')) return;
+    const comments = await getDocs(collection(db, 'comments'));
+    comments.forEach(async docSnap => await deleteDoc(doc(db, 'comments', docSnap.id)));
+    const teamNames = await getDocs(collection(db, 'teamNames'));
+    teamNames.forEach(async docSnap => await deleteDoc(doc(db, 'teamNames', docSnap.id)));
+    alert('데이터가 모두 삭제되었습니다.');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 const teams = Array.from({ length: 14 }, (_, i) => `${i + 1}조`);
 const badges = [
