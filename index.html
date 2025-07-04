@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>실시간 Firebase 연동 보상 래더보드 (학생 이름 저장)</title>
+<title>실시간 탐구실험 보상 래더보드 </title>
 <style>
     body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
     h1 { text-align: center; }
@@ -17,7 +17,7 @@
 </style>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, setDoc, doc, orderBy, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, setDoc, doc, deleteDoc, orderBy, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA67vsBnnxLW-5UbkEMdES3MTzWOwY_zvk",
@@ -59,6 +59,15 @@ window.uploadData = async function(event) {
     }
 }
 
+window.clearData = async function() {
+    if (!confirm('모든 코멘트 및 이름 데이터를 삭제하시겠습니까?')) return;
+    const commentsSnapshot = await getDocs(collection(db, 'comments'));
+    commentsSnapshot.forEach(async (docSnap) => { await deleteDoc(doc(db, 'comments', docSnap.id)); });
+    const namesSnapshot = await getDocs(collection(db, 'teamNames'));
+    namesSnapshot.forEach(async (docSnap) => { await deleteDoc(doc(db, 'teamNames', docSnap.id)); });
+    alert('모든 데이터가 삭제되었습니다. 새로고침해주세요.');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 const teams = Array.from({ length: 14 }, (_, i) => `${i + 1}조`);
 const badges = [
@@ -85,12 +94,12 @@ teams.forEach(team => {
     headerDiv.appendChild(nameInput);
     teamDiv.appendChild(headerDiv);
 
-    // 학생 이름 실시간 저장 및 표시
     nameInput.addEventListener('change', async () => {
         await setDoc(doc(db, 'teamNames', team), {
             team: team,
             studentName: nameInput.value.trim()
-        });
+        }, { merge: true });
+        alert(`${team} 이름 저장 완료`);
     });
 
     const badgeContainer = document.createElement('div');
@@ -124,7 +133,6 @@ teams.forEach(team => {
     teamDiv.appendChild(badgeContainer);
     teamsContainer.appendChild(teamDiv);
 
-    // 페이지 로드 시 저장된 이름 불러오기
     onSnapshot(doc(db, 'teamNames', team), (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -151,9 +159,10 @@ onSnapshot(q, snapshot => {
 </script>
 </head>
 <body>
-<h1>실시간 Firebase 보상 래더보드 (학생 이름 저장)</h1>
+<h1>실시간 Firebase 래더보드 (삭제 기능 포함)</h1>
 <button onclick="downloadData()">데이터 다운로드</button>
 <input type="file" accept="application/json" onchange="uploadData(event)">
+<button onclick="clearData()" style="background-color: red; color: white;">데이터 전체 삭제</button>
 <div id="teams"></div>
 </body>
 </html>
