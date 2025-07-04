@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>실시간 탐구실험 보상 래더보드 </title>
+<title>실시간 Firebase 래더보드 (조별 정확한 기록)</title>
 <style>
     body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
     h1 { text-align: center; }
@@ -61,10 +61,10 @@ window.uploadJSON = async function(event) {
 
 window.downloadCSV = async function() {
     const snapshot = await getDocs(collection(db, 'comments'));
-    const rows = [['학생이름', '배지', '코멘트']];
+    const rows = [['조', '학생이름', '배지', '코멘트']];
     snapshot.docs.forEach(doc => {
         const data = doc.data();
-        rows.push([data.studentName, data.badge, data.comment]);
+        rows.push([data.team, data.studentName, data.badge, data.comment]);
     });
     let csvContent = '\ufeff' + rows.map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -101,6 +101,7 @@ const teamsContainer = document.getElementById('teams');
 teams.forEach(team => {
     const teamDiv = document.createElement('div');
     teamDiv.className = 'team';
+    teamDiv.dataset.team = team;
     const headerDiv = document.createElement('div');
     headerDiv.className = 'team-header';
     const title = document.createElement('h2');
@@ -115,6 +116,7 @@ teams.forEach(team => {
 
     nameInput.addEventListener('change', async () => {
         await setDoc(doc(db, 'teamNames', team), {
+            team: team,
             studentName: nameInput.value.trim()
         }, { merge: true });
         alert(`${team} 이름 저장 완료`);
@@ -137,6 +139,7 @@ teams.forEach(team => {
             const comment = prompt(`💬 ${badge.label} 코멘트를 입력하세요:`);
             if (comment !== null && comment.trim() !== '') {
                 await addDoc(collection(db, 'comments'), {
+                    team: team,
                     studentName: studentName,
                     badge: badge.label,
                     icon: badge.icon,
@@ -163,7 +166,7 @@ onSnapshot(q, snapshot => {
     snapshot.docChanges().forEach(change => {
         if (change.type === 'added') {
             const data = change.doc.data();
-            const teamDiv = Array.from(document.querySelectorAll('.team')).find(div => div.querySelector('h2').textContent);
+            const teamDiv = Array.from(document.querySelectorAll('.team')).find(div => div.dataset.team === data.team);
             if (teamDiv) {
                 const log = document.createElement('div');
                 log.textContent = `${data.studentName} - ${data.icon} ${data.badge}: ${data.comment}`;
@@ -176,7 +179,7 @@ onSnapshot(q, snapshot => {
 </script>
 </head>
 <body>
-<h1>실시간 Firebase 래더보드 (JSON & CSV 다운로드, 한글깨짐 해결)</h1>
+<h1>실시간 Firebase 래더보드 (조별 정확한 기록)</h1>
 <button onclick="downloadJSON()">JSON 다운로드</button>
 <input type="file" accept="application/json" onchange="uploadJSON(event)">
 <button onclick="downloadCSV()">CSV 다운로드</button>
