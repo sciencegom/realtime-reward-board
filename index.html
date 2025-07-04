@@ -32,13 +32,17 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 window.downloadJSON = async function() {
-    const snapshot = await getDocs(collection(db, 'comments'));
-    const data = snapshot.docs.map(doc => doc.data());
+    const commentsSnapshot = await getDocs(collection(db, 'comments'));
+    const teamNamesSnapshot = await getDocs(collection(db, 'teamNames'));
+    const data = {
+        comments: commentsSnapshot.docs.map(doc => doc.data()),
+        teamNames: teamNamesSnapshot.docs.map(doc => doc.data())
+    };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'rewardBoardData.json';
+    a.download = 'rewardBoardFullBackup.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -50,32 +54,22 @@ window.uploadJSON = async function(event) {
     const text = await file.text();
     try {
         const json = JSON.parse(text);
-        for (const entry of json) {
-            await addDoc(collection(db, 'comments'), entry);
+        if (json.comments && json.teamNames) {
+            for (const entry of json.comments) {
+                await addDoc(collection(db, 'comments'), entry);
+            }
+            for (const entry of json.teamNames) {
+                if (entry.team) {
+                    await setDoc(doc(db, 'teamNames', entry.team), entry);
+                }
+            }
+            alert('전체 데이터 업로드 완료! 새로고침 해주세요.');
+        } else {
+            alert('JSON 구조가 올바르지 않습니다.');
         }
-        alert('JSON 데이터 업로드 완료! 새로고침 해주세요.');
     } catch (e) {
         alert('올바르지 않은 JSON 파일입니다.');
     }
-}
-
-window.downloadCSV = async function() {
-    const snapshot = await getDocs(collection(db, 'comments'));
-    const rows = [['조', '학생이름', '배지', '코멘트']];
-    snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        rows.push([data.team, data.studentName, data.badge, data.comment]);
-    });
-    let csvContent = '\ufeff' + rows.map(e => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "rewardBoardData.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
 }
 
 window.clearData = async function() {
@@ -84,7 +78,7 @@ window.clearData = async function() {
     commentsSnapshot.forEach(async (docSnap) => { await deleteDoc(doc(db, 'comments', docSnap.id)); });
     const namesSnapshot = await getDocs(collection(db, 'teamNames'));
     namesSnapshot.forEach(async (docSnap) => { await deleteDoc(doc(db, 'teamNames', docSnap.id)); });
-    alert('모든 데이터가 삭제되었습니다. 새로고침 해주세요.');
+    alert('모든 데이터가 삭제되었습니다. 새로고침해주세요.');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -182,7 +176,6 @@ onSnapshot(q, snapshot => {
 <h1>실시간 탐구실험 보상 래더보드</h1>
 <button onclick="downloadJSON()">JSON 다운로드</button>
 <input type="file" accept="application/json" onchange="uploadJSON(event)">
-<button onclick="downloadCSV()">CSV 다운로드</button>
 <button onclick="clearData()" style="background-color: red; color: white;">데이터 초기화</button>
 <div id="teams"></div>
 </body>
