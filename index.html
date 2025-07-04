@@ -8,12 +8,12 @@
     body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
     h1 { text-align: center; }
     #teams { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 800px; margin: 0 auto; }
-    .team { background: #fff; border-radius: 10px; padding: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    .team { background: #fff; border-radius: 10px; padding: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; }
     .badge { cursor: pointer; margin: 3px; font-size: 30px; display: flex; align-items: center; white-space: nowrap; }
     .badge-label { font-size: 14px; margin-right: 5px; }
-    .badge-container { display: flex; gap: 8px; overflow-x: auto; }
-    .name-input { width: 60%; padding: 5px; margin-bottom: 5px; }
-    .team-header { display: flex; align-items: center; justify-content: space-between; }
+    .badge-container { display: flex; gap: 8px; overflow-x: auto; justify-content: center; flex-wrap: wrap; }
+    .name-input { width: auto; padding: 5px; margin-left: 10px; text-align: center; }
+    .team-header { display: flex; align-items: center; justify-content: center; gap: 10px; }
     button { margin: 5px; padding: 8px 12px; }
 </style>
 <script type="module">
@@ -47,14 +47,18 @@ teams.forEach(team => {
     const teamDiv = document.createElement('div');
     teamDiv.className = 'team';
     teamDiv.dataset.team = team;
+
     const headerDiv = document.createElement('div');
     headerDiv.className = 'team-header';
+
     const title = document.createElement('h2');
     title.textContent = team;
+
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.placeholder = `학생 이름 입력`;
     nameInput.className = 'name-input';
+
     headerDiv.appendChild(title);
     headerDiv.appendChild(nameInput);
     teamDiv.appendChild(headerDiv);
@@ -68,14 +72,18 @@ teams.forEach(team => {
 
     const badgeContainer = document.createElement('div');
     badgeContainer.className = 'badge-container';
+
     badges.forEach(badge => {
         const badgeSpan = document.createElement('span');
         badgeSpan.className = 'badge';
+
         const badgeLabel = document.createElement('span');
         badgeLabel.className = 'badge-label';
         badgeLabel.textContent = badge.label;
+
         const badgeIcon = document.createElement('span');
         badgeIcon.textContent = badge.icon;
+
         badgeSpan.appendChild(badgeLabel);
         badgeSpan.appendChild(badgeIcon);
 
@@ -95,6 +103,7 @@ teams.forEach(team => {
         });
         badgeContainer.appendChild(badgeSpan);
     });
+
     teamDiv.appendChild(badgeContainer);
     teamsContainer.appendChild(teamDiv);
 
@@ -131,4 +140,3 @@ onSnapshot(q, snap => {
 <div id="teams"></div>
 </body>
 </html>
-
