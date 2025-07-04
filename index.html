@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>실시간 Firebase 연동 보상 래더보드</title>
+<title>실시간 Firebase 연동 보상 래더보드 (학생 이름 저장)</title>
 <style>
     body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
     h1 { text-align: center; }
@@ -17,7 +17,7 @@
 </style>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, orderBy, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, setDoc, doc, orderBy, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA67vsBnnxLW-5UbkEMdES3MTzWOwY_zvk",
@@ -85,6 +85,14 @@ teams.forEach(team => {
     headerDiv.appendChild(nameInput);
     teamDiv.appendChild(headerDiv);
 
+    // 학생 이름 실시간 저장 및 표시
+    nameInput.addEventListener('change', async () => {
+        await setDoc(doc(db, 'teamNames', team), {
+            team: team,
+            studentName: nameInput.value.trim()
+        });
+    });
+
     const badgeContainer = document.createElement('div');
     badges.forEach(badge => {
         const badgeSpan = document.createElement('span');
@@ -115,6 +123,14 @@ teams.forEach(team => {
     });
     teamDiv.appendChild(badgeContainer);
     teamsContainer.appendChild(teamDiv);
+
+    // 페이지 로드 시 저장된 이름 불러오기
+    onSnapshot(doc(db, 'teamNames', team), (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            nameInput.value = data.studentName || '';
+        }
+    });
 });
 
 const q = query(collection(db, 'comments'), orderBy('timestamp'));
@@ -135,7 +151,7 @@ onSnapshot(q, snapshot => {
 </script>
 </head>
 <body>
-<h1>실시간 Firebase 보상 래더보드</h1>
+<h1>실시간 Firebase 보상 래더보드 (학생 이름 저장)</h1>
 <button onclick="downloadData()">데이터 다운로드</button>
 <input type="file" accept="application/json" onchange="uploadData(event)">
 <div id="teams"></div>
