@@ -186,6 +186,8 @@ onSnapshot(q, snap => {
             const teamDiv = document.querySelector(`.team[data-team='${d.team}']`);
             if (teamDiv) {
                 const log = document.createElement('div');
+                 log.className = 'comment-log '
+ ;
                 log.textContent = `${d.studentName} - ${d.icon} ${d.badge}: ${d.comment}`;
                 teamDiv.appendChild(log);
             }
