@@ -99,7 +99,6 @@ window.clearData = async function() {
 document.addEventListener('DOMContentLoaded', () => {
 const teams = Array.from({ length: 14 }, (_, i) => `${i + 1}조`);
 const badges = [
-  { icon: '🕵️‍♂️', label: '센서 선정 마스터' },    // 1. 센서 선택 및 이해
   { icon: '🔌',  label: '회로 구성 전문가' },    // 2. 아두이노·회로 조립
   { icon: '📥',  label: '데이터 수집가' },        // 3. MBL/아두이노로 데이터 획득
   { icon: '➗',  label: '평균 처리 챔피언' },   // 4. 수집 데이터 평균 처리
@@ -201,7 +200,7 @@ onSnapshot(q, snap => {
 </script>
 </head>
 <body>
-<h1>[실시간 탐구실험 보상 래더보드]</h1>
+<h1>[실시간 탐구실험 보상 래더보드-센서와 데이터]</h1>
 <button onclick="downloadJSON()">JSON 다운로드</button>
 <input type="file" accept="application/json" onchange="uploadJSON(event)">
 <button onclick="downloadCSV()">CSV 다운로드</button>
